@@ -299,7 +299,7 @@ function toggleTheme() {
     const isDarkMode = document.body.classList.contains('dark-mode');
     const themeToggle = document.getElementById('theme-toggle');
     
-    themeToggle.textContent = isDarkMode ? '☀️ 浅色模式' : '🌙 深色模式';
+    themeToggle.textContent = isDarkMode ? '☀️ 浅色' : '🌙 深色';
     localStorage.setItem('darkMode', isDarkMode);
 }
 
@@ -310,7 +310,7 @@ function loadTheme() {
     
     if (isDarkMode) {
         document.body.classList.add('dark-mode');
-        themeToggle.textContent = '☀️ 浅色模式';
+        themeToggle.textContent = '☀️ 浅色';
     }
 }
 
