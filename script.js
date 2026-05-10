@@ -25,6 +25,22 @@ function addEventListeners() {
         if (e.key === 'Enter') addTodo();
     });
 
+// 下一天按钮点击事件（点击一次加一天）
+document.getElementById('next-day-btn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const dateInput = document.getElementById('due-date-input');
+    
+    // 如果输入框有值，就在当前值基础上加一天；如果为空，从今天开始加
+    let currentDate = dateInput.value ? new Date(dateInput.value) : new Date();
+    currentDate.setDate(currentDate.getDate() + 1);
+    
+    // 格式化为YYYY-MM-DD
+    const year = currentDate.getFullYear();
+    const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+    const day = String(currentDate.getDate()).padStart(2, '0');
+    dateInput.value = `${year}-${month}-${day}`;
+});
+
     // 筛选任务
     filterBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -47,15 +63,18 @@ function addEventListeners() {
         if (editingElement && !editingElement.contains(e.target)) {
             const editInput = editingElement.querySelector('.edit-input');
             const editPrioritySelect = editingElement.querySelector('.edit-priority-select');
+            const editDueDateInput = editingElement.querySelector('.edit-due-date-input');
             const todo = todos.find(t => t.id === currentEditingId);
             
             if (editInput && editPrioritySelect && todo) {
                 const newText = editInput.value.trim();
                 const newPriority = editPrioritySelect.value;
+                const newDueDate = editDueDateInput ? editDueDateInput.value : null;
                 
                 if (newText) {
                     todo.text = newText;
                     todo.priority = newPriority;
+                    todo.dueDate = newDueDate;
                     saveTodos();
                 }
             }
@@ -70,6 +89,7 @@ function addEventListeners() {
 function addTodo() {
     const text = todoInput.value.trim();
     const priority = document.getElementById('priority-select').value;
+    const dueDate = document.getElementById('due-date-input').value;
     
     if (!text) {
         alert('请输入任务内容！');
@@ -80,7 +100,8 @@ function addTodo() {
         id: Date.now(),
         text: text,
         completed: false,
-        priority: priority
+        priority: priority,
+        dueDate: dueDate || null
     };
 
     todos.push(todo);
@@ -101,10 +122,25 @@ function renderTodos() {
         if (filter === 'completed') return todo.completed;
     });
 
-    // 按优先级排序：高 > 中 > 低
+    // 排序逻辑：优先级 > 截止日期
     filteredTodos.sort((a, b) => {
         const priorityOrder = { high: 0, medium: 1, low: 2 };
-        return priorityOrder[a.priority] - priorityOrder[b.priority];
+        
+        // 先按优先级排序
+        if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
+            return priorityOrder[a.priority] - priorityOrder[b.priority];
+        }
+        
+        // 同优先级下，有截止日期的排在前面
+        if (a.dueDate && !b.dueDate) return -1;
+        if (!a.dueDate && b.dueDate) return 1;
+        
+        // 都有截止日期的，按日期从近到远排序
+        if (a.dueDate && b.dueDate) {
+            return new Date(a.dueDate) - new Date(b.dueDate);
+        }
+        
+        return 0;
     });
 
     filteredTodos.forEach(todo => {
@@ -112,11 +148,20 @@ function renderTodos() {
         li.className = `todo-item ${todo.completed ? 'completed' : ''}`;
         li.dataset.id = todo.id;
 
+        // 计算截止日期状态
+        let dueDateClass = '';
+        if (isOverdue(todo.dueDate)) {
+            dueDateClass = 'overdue';
+        } else if (isDueSoon(todo.dueDate)) {
+            dueDateClass = 'due-soon';
+        }
+
         li.innerHTML = `
             <input type="checkbox" ${todo.completed ? 'checked' : ''}>
             <span class="priority-badge priority-${todo.priority}" data-id="${todo.id}">
                 ${todo.priority === 'high' ? '高' : todo.priority === 'medium' ? '中' : '低'}
             </span>
+            ${todo.dueDate ? `<span class="due-date-badge ${dueDateClass}">${formatDate(todo.dueDate)}</span>` : ''}
             <span class="todo-text">${escapeHtml(todo.text)}</span>
             <button class="edit-btn">编辑</button>
             <button class="delete-btn">删除</button>
@@ -193,15 +238,18 @@ function editTodo(id) {
         if (editingElement) {
             const editInput = editingElement.querySelector('.edit-input');
             const editPrioritySelect = editingElement.querySelector('.edit-priority-select');
+            const editDueDateInput = editingElement.querySelector('.edit-due-date-input');
             const todo = todos.find(t => t.id === currentEditingId);
             
             if (editInput && editPrioritySelect && todo) {
                 const newText = editInput.value.trim();
                 const newPriority = editPrioritySelect.value;
+                const newDueDate = editDueDateInput ? editDueDateInput.value : null;
                 
                 if (newText) {
                     todo.text = newText;
                     todo.priority = newPriority;
+                    todo.dueDate = newDueDate;
                     saveTodos();
                 }
             }
@@ -221,6 +269,7 @@ function editTodo(id) {
     const todo = todos.find(t => t.id === id);
     const originalText = todo.text;
     const originalPriority = todo.priority;
+    const originalDueDate = todo.dueDate || '';
 
     // 创建编辑模式的内容
     todoElement.innerHTML = `
@@ -230,6 +279,7 @@ function editTodo(id) {
             <option value="medium" ${originalPriority === 'medium' ? 'selected' : ''}>中优先级</option>
             <option value="high" ${originalPriority === 'high' ? 'selected' : ''}>高优先级</option>
         </select>
+        <input type="date" class="edit-due-date-input" value="${originalDueDate}">
         <input type="text" class="edit-input" value="${escapeHtml(originalText)}">
         <button class="save-btn">保存</button>
         <button class="cancel-btn">取消</button>
@@ -248,10 +298,12 @@ function editTodo(id) {
     const saveEdit = () => {
         const newText = editInput.value.trim();
         const newPriority = todoElement.querySelector('.edit-priority-select').value;
+        const newDueDate = todoElement.querySelector('.edit-due-date-input').value;
         
         if (newText) {
             todo.text = newText;
             todo.priority = newPriority;
+            todo.dueDate = newDueDate || null;
             saveTodos();
         }
         currentEditingId = null;
@@ -299,7 +351,7 @@ function toggleTheme() {
     const isDarkMode = document.body.classList.contains('dark-mode');
     const themeToggle = document.getElementById('theme-toggle');
     
-    themeToggle.textContent = isDarkMode ? '☀️' : '🌙';
+    themeToggle.textContent = isDarkMode ? '☀️ 浅色' : '🌙 深色';
     localStorage.setItem('darkMode', isDarkMode);
 }
 
@@ -326,5 +378,81 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+// 判断日期是否已过期（第二天才算过期）
+function isOverdue(dueDate) {
+    if (!dueDate) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const due = new Date(dueDate);
+    due.setHours(0, 0, 0, 0);
+    // 只有当截止日期早于今天0点时，才算过期
+    return due < today;
+}
+
+// 判断日期是否即将到期（包括当天）
+function isDueSoon(dueDate) {
+    if (!dueDate) return false;
+    const now = new Date();
+    const due = new Date(dueDate);
+    // 当天的截止日期视为即将到期
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    // 截止日期在今天0点到明天0点之间，视为即将到期
+    return due >= today && due < tomorrow;
+}
+
+// 格式化日期显示
+function formatDate(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    return `${month}月${day}日`;
+}
+
+// 获取今天的日期字符串（YYYY-MM-DD格式）
+function getTodayDateString() {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+// 获取明天的日期字符串（YYYY-MM-DD格式）
+function getTomorrowDateString() {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const year = tomorrow.getFullYear();
+    const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+    const day = String(tomorrow.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
 // 启动应用
 init();
+
+// 初始化日期输入框占位符
+const dateInput = document.getElementById('due-date-input');
+if (!dateInput.value) {
+    dateInput.classList.add('empty');
+}
+
+// 监听日期输入框变化
+dateInput.addEventListener('change', () => {
+    if (dateInput.value) {
+        dateInput.classList.remove('empty');
+    } else {
+        dateInput.classList.add('empty');
+    }
+});
+
+// 监听日期输入框清空
+dateInput.addEventListener('input', () => {
+    if (!dateInput.value) {
+        dateInput.classList.add('empty');
+    }
+});

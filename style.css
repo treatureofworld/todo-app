@@ -34,27 +34,78 @@ h1 {
 
 .input-container {
     display: flex;
-    gap: 10px;
+    gap: 8px;
     margin-bottom: 15px;
+    flex-wrap: nowrap;
+    align-items: stretch; /* 关键：让所有子元素高度自动统一 */
 }
 
 #todo-input {
-    flex: 1;
-    padding: 12px 15px;
+    flex: 2;
+    min-width: 150px; /* 增大最小宽度，避免显示不完全 */
+    padding: 10px 12px;
     border: none;
     border-radius: 5px;
     font-size: 16px;
+    height: 40px; /* 统一高度 */
+    box-sizing: border-box;
+}
+
+#priority-select {
+    flex: 0 0 90px;
+    padding: 12px 8px;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+    background-color: white;
+    cursor: pointer;
+    height: 40px;
+    box-sizing: border-box;
+}
+
+#due-date-input {
+    flex: 0 0 130px;
+    padding: 10px 8px;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+    cursor: pointer;
+    height: 40px; /* 统一高度 */
+    box-sizing: border-box;
+}
+
+#next-day-btn {
+    flex: 0 0 65px;
+    padding: 10px 8px;
+    background-color: #f59e0b;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s;
+    white-space: nowrap;
+    height: 40px; /* 统一高度 */
+    box-sizing: border-box;
+}
+
+#next-day-btn:hover {
+    background-color: #d97706;
 }
 
 #add-btn {
-    padding: 12px 20px;
+    flex: 0 0 65px;
+    padding: 10px 8px;
     background-color: #4f46e5;
     color: white;
     border: none;
     border-radius: 5px;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 14px;
     transition: background-color 0.3s;
+    white-space: nowrap;
+    height: 40px; /* 统一高度 */
+    box-sizing: border-box;
 }
 
 #add-btn:hover {
@@ -101,7 +152,7 @@ h1 {
 
 .todo-text {
     flex: 1;
-    margin: 0 15px;
+    margin: 0 10px;
     font-size: 16px;
 }
 
@@ -235,6 +286,7 @@ body.dark-mode .todo-item:hover {
     border-radius: 12px;
     font-size: 12px;
     font-weight: 500;
+    margin-left: 10px; /* 新增：与复选框的间距 */
     margin-right: 10px;
     cursor: pointer; /* 添加这行，让鼠标变成手型 */
     transition: transform 0.2s; /* 添加过渡效果 */
@@ -384,6 +436,13 @@ body.dark-mode .todo-item:has(.edit-input) {
         padding: 6px 8px !important;
         font-size: 13px !important;
     }
+
+    /* 新增：超小屏幕下按钮文字缩小 */
+    #tomorrow-btn, #add-btn {
+        font-size: 13px !important;
+        padding: 10px 8px !important;
+    }
+
 }
 
 /* 手机端全局优化 */
@@ -419,13 +478,10 @@ body.dark-mode .todo-item:has(.edit-input) {
         width: 100%;
     }
 
-    #priority-select {
-        flex: 1;
-    }
-
-    #add-btn {
-        flex: 1;
-    }
+#priority-select, #due-date-input, #tomorrow-btn, #add-btn {
+    flex: 1;
+    min-width: 0; /* 手机端允许压缩 */
+}
 
     .filters {
         flex-wrap: wrap;
@@ -449,4 +505,151 @@ body.dark-mode .todo-item:has(.edit-input) {
         padding: 6px 10px;
         font-size: 14px;
     }
+}
+
+
+/* 截止日期输入框样式 */
+#due-date-input {
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+body.dark-mode #priority-select,
+body.dark-mode #due-date-input {
+    background-color: #1a1a2e;
+    color: white;
+    border: none;
+}
+
+/* 截止日期标签样式 */
+.due-date-badge {
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    margin-right: 10px;
+    background-color: #fef3c7; /* 其他日期：黄色 */
+    color: #d97706;
+}
+
+/* 当天截止：红色 */
+.due-date-badge.due-soon {
+    background-color: #fee2e2;
+    color: #dc2626;
+}
+
+/* 已过期：灰色 */
+.due-date-badge.overdue {
+    background-color: #e5e7eb;
+    color: #6b7280;
+}
+
+body.dark-mode .due-date-badge {
+    background-color: #78350f; /* 其他日期：深黄色 */
+    color: #fbbf24;
+}
+
+body.dark-mode .due-date-badge.due-soon {
+    background-color: #7f1d1d; /* 当天截止：深红色 */
+    color: #fca5a5;
+}
+
+body.dark-mode .due-date-badge.overdue {
+    background-color: #374151; /* 已过期：深灰色 */
+    color: #9ca3af;
+}
+
+
+/* 编辑模式下的日期选择器 */
+.edit-due-date-input {
+    padding: 6px 10px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    font-size: 14px;
+    background-color: white;
+    cursor: pointer;
+    margin-right: 10px;
+}
+
+body.dark-mode .edit-due-date-input {
+    background-color: #1a1a2e;
+    color: white;
+    border-color: #2d3a5a;
+}
+
+/* 手机端响应式适配 */
+@media (max-width: 768px) {
+    #due-date-input {
+        width: 100%;
+    }
+
+    .due-date-badge {
+        font-size: 11px;
+        padding: 2px 6px;
+    }
+
+    .edit-due-date-input {
+        order: 2;
+        flex: 1;
+        margin-right: 0 !important;
+    }
+}
+
+/* 修改日期选择器图标颜色 */
+#due-date-input::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    filter: invert(0.5); /* 浅色模式下灰色图标 */
+}
+
+body.dark-mode #due-date-input::-webkit-calendar-picker-indicator {
+    filter: invert(1); /* 深色模式下白色图标 */
+}
+
+/* 日期输入框为空时显示占位符 */
+#due-date-input:invalid {
+    color: #9ca3af;
+}
+
+#due-date-input:invalid::-webkit-datetime-edit {
+    display: none;
+}
+
+#due-date-input:invalid::before {
+    content: attr(placeholder);
+    display: block;
+    color: #9ca3af;
+}
+
+body.dark-mode #due-date-input:invalid::before {
+    color: #6b7280;
+}
+
+/* 日期输入框占位符样式 */
+#due-date-input {
+    position: relative;
+}
+
+#due-date-input.empty::before {
+    content: attr(data-placeholder);
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9ca3af;
+    pointer-events: none;
+}
+
+body.dark-mode #due-date-input.empty::before {
+    color: #6b7280;
+}
+
+/* 隐藏原生的yyyy/mm/dd提示 */
+#due-date-input.empty::-webkit-datetime-edit-year-field,
+#due-date-input.empty::-webkit-datetime-edit-month-field,
+#due-date-input.empty::-webkit-datetime-edit-day-field,
+#due-date-input.empty::-webkit-datetime-edit-text {
+    display: none;
 }
