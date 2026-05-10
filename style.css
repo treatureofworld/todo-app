@@ -380,6 +380,49 @@ body.dark-mode .todo-item:has(.edit-input) {
     transition: all 0.2s ease;
 }
 
+/* 编辑模式通用样式（电脑端） */
+.todo-item:has(.edit-input) {
+    flex-wrap: nowrap;
+    gap: 6px; /* 进一步减小间距 */
+    align-items: center;
+    padding-right: 10px; /* 给右边留出一点空间 */
+}
+
+.edit-priority-select {
+    flex: 0 0 75px; /* 从90px减小到75px */
+    height: 34px;
+    box-sizing: border-box;
+    padding: 0 6px;
+    font-size: 13px;
+}
+
+.edit-due-date-input {
+    flex: 0 0 110px; /* 从130px减小到110px */
+    height: 34px;
+    box-sizing: border-box;
+    padding: 0 6px;
+    font-size: 13px;
+}
+
+.edit-input {
+    flex: 1;
+    min-width: 100px; /* 设置最小宽度，避免被过度压缩 */
+    height: 34px;
+    box-sizing: border-box;
+    margin: 0 4px !important;
+    padding: 0 8px;
+    font-size: 14px;
+}
+
+.save-btn, .cancel-btn {
+    flex: 0 0 50px; /* 从60px减小到50px */
+    height: 34px;
+    box-sizing: border-box;
+    padding: 0 6px !important;
+    font-size: 13px !important;
+    white-space: nowrap;
+}
+
 /* 手机端响应式适配 */
 @media (max-width: 768px) {
     /* 编辑模式下允许换行 */
@@ -398,6 +441,12 @@ body.dark-mode .todo-item:has(.edit-input) {
 
     /* 优先级选择器和按钮放在第二行 */
     .edit-priority-select {
+        order: 2;
+        flex: 1;
+        margin-right: 0 !important;
+    }
+
+    .edit-due-date-input {
         order: 2;
         flex: 1;
         margin-right: 0 !important;
@@ -478,9 +527,15 @@ body.dark-mode .todo-item:has(.edit-input) {
         width: 100%;
     }
 
-#priority-select, #due-date-input, #tomorrow-btn, #add-btn {
-    flex: 1;
-    min-width: 0; /* 手机端允许压缩 */
+/* 手机端输入控件布局优化 */
+#priority-select, #due-date-input, #add-btn {
+    flex: 1; /* 这三个控件平分宽度 */
+    min-width: 0;
+}
+#next-day-btn {
+    flex: 0 0 62px; /* 固定小巧宽度，不拉伸 */
+    padding: 10px 4px; /* 缩小内边距，更精致 */
+    font-size: 13px;    /* 缩小文字 */
 }
 
     .filters {
@@ -627,12 +682,12 @@ body.dark-mode #due-date-input:invalid::before {
     color: #6b7280;
 }
 
-/* 日期输入框占位符样式 */
-#due-date-input {
+/* 日期输入框占位符样式（所有日期输入框通用） */
+input[type="date"] {
     position: relative;
 }
 
-#due-date-input.empty::before {
+input[type="date"].empty::before {
     content: attr(data-placeholder);
     position: absolute;
     left: 8px;
@@ -642,14 +697,14 @@ body.dark-mode #due-date-input:invalid::before {
     pointer-events: none;
 }
 
-body.dark-mode #due-date-input.empty::before {
+body.dark-mode input[type="date"].empty::before {
     color: #6b7280;
 }
 
 /* 隐藏原生的yyyy/mm/dd提示 */
-#due-date-input.empty::-webkit-datetime-edit-year-field,
-#due-date-input.empty::-webkit-datetime-edit-month-field,
-#due-date-input.empty::-webkit-datetime-edit-day-field,
-#due-date-input.empty::-webkit-datetime-edit-text {
+input[type="date"].empty::-webkit-datetime-edit-year-field,
+input[type="date"].empty::-webkit-datetime-edit-month-field,
+input[type="date"].empty::-webkit-datetime-edit-day-field,
+input[type="date"].empty::-webkit-datetime-edit-text {
     display: none;
 }

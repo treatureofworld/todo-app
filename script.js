@@ -1,23 +1,34 @@
-// 获取DOM元素
+// ========================================
+// DOM 元素获取（集中管理，只查询一次）
+// ========================================
 const todoInput = document.getElementById('todo-input');
 const addBtn = document.getElementById('add-btn');
 const todoList = document.getElementById('todo-list');
 const filterBtns = document.querySelectorAll('.filter-btn');
+const themeToggle = document.getElementById('theme-toggle');
+const prioritySelect = document.getElementById('priority-select');
+const dueDateInput = document.getElementById('due-date-input');
+const nextDayBtn = document.getElementById('next-day-btn');
 
-// 从本地存储加载任务
+// ========================================
+// 全局变量
+// ========================================
 let todos = JSON.parse(localStorage.getItem('todos')) || [];
+let currentEditingId = null; // 跟踪当前正在编辑的任务ID
 
-// 跟踪当前正在编辑的任务ID
-let currentEditingId = null;
-
-// 初始化应用
+// ========================================
+// 应用初始化
+// ========================================
 function init() {
     loadTheme();
     renderTodos();
     addEventListeners();
+    initDateInputPlaceholder();
 }
 
-// 添加事件监听器
+// ========================================
+// 事件监听器（集中管理所有事件）
+// ========================================
 function addEventListeners() {
     // 添加任务
     addBtn.addEventListener('click', addTodo);
@@ -25,21 +36,14 @@ function addEventListeners() {
         if (e.key === 'Enter') addTodo();
     });
 
-// 下一天按钮点击事件（点击一次加一天）
-document.getElementById('next-day-btn').addEventListener('click', (e) => {
-    e.stopPropagation();
-    const dateInput = document.getElementById('due-date-input');
-    
-    // 如果输入框有值，就在当前值基础上加一天；如果为空，从今天开始加
-    let currentDate = dateInput.value ? new Date(dateInput.value) : new Date();
-    currentDate.setDate(currentDate.getDate() + 1);
-    
-    // 格式化为YYYY-MM-DD
-    const year = currentDate.getFullYear();
-    const month = String(currentDate.getMonth() + 1).padStart(2, '0');
-    const day = String(currentDate.getDate()).padStart(2, '0');
-    dateInput.value = `${year}-${month}-${day}`;
-});
+    // 下一天按钮点击事件（点击一次日期加一天）
+    nextDayBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        let currentDate = dueDateInput.value ? new Date(dueDateInput.value) : new Date();
+        currentDate.setDate(currentDate.getDate() + 1);
+        dueDateInput.value = formatDateToISO(currentDate);
+        updateDateInputPlaceholder();
+    });
 
     // 筛选任务
     filterBtns.forEach(btn => {
@@ -52,7 +56,6 @@ document.getElementById('next-day-btn').addEventListener('click', (e) => {
     });
 
     // 主题切换
-    const themeToggle = document.getElementById('theme-toggle');
     themeToggle.addEventListener('click', toggleTheme);
 
     // 点击页面空白处自动保存当前编辑的任务
@@ -61,35 +64,28 @@ document.getElementById('next-day-btn').addEventListener('click', (e) => {
         
         const editingElement = document.querySelector(`.todo-item[data-id="${currentEditingId}"]`);
         if (editingElement && !editingElement.contains(e.target)) {
-            const editInput = editingElement.querySelector('.edit-input');
-            const editPrioritySelect = editingElement.querySelector('.edit-priority-select');
-            const editDueDateInput = editingElement.querySelector('.edit-due-date-input');
-            const todo = todos.find(t => t.id === currentEditingId);
-            
-            if (editInput && editPrioritySelect && todo) {
-                const newText = editInput.value.trim();
-                const newPriority = editPrioritySelect.value;
-                const newDueDate = editDueDateInput ? editDueDateInput.value : null;
-                
-                if (newText) {
-                    todo.text = newText;
-                    todo.priority = newPriority;
-                    todo.dueDate = newDueDate;
-                    saveTodos();
-                }
-            }
-            
+            saveCurrentEdit();
             currentEditingId = null;
             renderTodos();
         }
     });
+
+    // 日期输入框变化事件
+    dueDateInput.addEventListener('change', updateDateInputPlaceholder);
+    dueDateInput.addEventListener('input', updateDateInputPlaceholder);
 }
 
-// 添加新任务
+// ========================================
+// 核心功能函数
+// ========================================
+
+/**
+ * 添加新任务
+ */
 function addTodo() {
     const text = todoInput.value.trim();
-    const priority = document.getElementById('priority-select').value;
-    const dueDate = document.getElementById('due-date-input').value;
+    const priority = prioritySelect.value;
+    const dueDate = dueDateInput.value;
     
     if (!text) {
         alert('请输入任务内容！');
@@ -110,12 +106,14 @@ function addTodo() {
     todoInput.value = '';
 }
 
-// 渲染任务列表
+/**
+ * 渲染任务列表
+ */
 function renderTodos() {
     const filter = document.querySelector('.filter-btn.active').dataset.filter;
-    
     todoList.innerHTML = '';
 
+    // 筛选任务
     const filteredTodos = todos.filter(todo => {
         if (filter === 'all') return true;
         if (filter === 'active') return !todo.completed;
@@ -143,60 +141,84 @@ function renderTodos() {
         return 0;
     });
 
+    // 渲染每个任务
     filteredTodos.forEach(todo => {
-        const li = document.createElement('li');
-        li.className = `todo-item ${todo.completed ? 'completed' : ''}`;
-        li.dataset.id = todo.id;
-
-        // 计算截止日期状态
-        let dueDateClass = '';
-        if (isOverdue(todo.dueDate)) {
-            dueDateClass = 'overdue';
-        } else if (isDueSoon(todo.dueDate)) {
-            dueDateClass = 'due-soon';
-        }
-
-        li.innerHTML = `
-            <input type="checkbox" ${todo.completed ? 'checked' : ''}>
-            <span class="priority-badge priority-${todo.priority}" data-id="${todo.id}">
-                ${todo.priority === 'high' ? '高' : todo.priority === 'medium' ? '中' : '低'}
-            </span>
-            ${todo.dueDate ? `<span class="due-date-badge ${dueDateClass}">${formatDate(todo.dueDate)}</span>` : ''}
-            <span class="todo-text">${escapeHtml(todo.text)}</span>
-            <button class="edit-btn">编辑</button>
-            <button class="delete-btn">删除</button>
-        `;
-
-        // 切换任务完成状态
-        li.querySelector('input[type="checkbox"]').addEventListener('change', (e) => {
-            e.stopPropagation();
-            toggleTodo(todo.id);
-        });
-
-        // 点击优先级标签切换优先级
-        li.querySelector('.priority-badge').addEventListener('click', (e) => {
-            e.stopPropagation();
-            togglePriority(todo.id);
-        });
-
-        // 编辑任务
-        li.querySelector('.edit-btn').addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (currentEditingId === todo.id) return;
-            editTodo(todo.id);
-        });
-
-        // 删除任务
-        li.querySelector('.delete-btn').addEventListener('click', (e) => {
-            e.stopPropagation();
-            deleteTodo(todo.id);
-        });
-
-        todoList.appendChild(li);
+        const todoElement = createTodoElement(todo);
+        todoList.appendChild(todoElement);
     });
 }
 
-// 切换任务完成状态
+/**
+ * 创建单个任务元素
+ * @param {Object} todo 任务对象
+ * @returns {HTMLElement} 任务DOM元素
+ */
+function createTodoElement(todo) {
+    const li = document.createElement('li');
+    li.className = `todo-item ${todo.completed ? 'completed' : ''}`;
+    li.dataset.id = todo.id;
+
+    // 计算截止日期状态
+    let dueDateClass = '';
+    if (isOverdue(todo.dueDate)) {
+        dueDateClass = 'overdue';
+    } else if (isDueSoon(todo.dueDate)) {
+        dueDateClass = 'due-soon';
+    }
+
+    li.innerHTML = `
+        <input type="checkbox" ${todo.completed ? 'checked' : ''}>
+        <span class="priority-badge priority-${todo.priority}" data-id="${todo.id}">
+            ${todo.priority === 'high' ? '高' : todo.priority === 'medium' ? '中' : '低'}
+        </span>
+        ${todo.dueDate ? `<span class="due-date-badge ${dueDateClass}">${formatDate(todo.dueDate)}</span>` : ''}
+        <span class="todo-text">${escapeHtml(todo.text)}</span>
+        <button class="edit-btn">编辑</button>
+        <button class="delete-btn">删除</button>
+    `;
+
+    // 绑定任务事件
+    bindTodoEvents(li, todo);
+
+    return li;
+}
+
+/**
+ * 绑定单个任务的事件
+ * @param {HTMLElement} element 任务元素
+ * @param {Object} todo 任务对象
+ */
+function bindTodoEvents(element, todo) {
+    // 切换任务完成状态
+    element.querySelector('input[type="checkbox"]').addEventListener('change', (e) => {
+        e.stopPropagation();
+        toggleTodo(todo.id);
+    });
+
+    // 点击优先级标签切换优先级
+    element.querySelector('.priority-badge').addEventListener('click', (e) => {
+        e.stopPropagation();
+        togglePriority(todo.id);
+    });
+
+    // 编辑任务
+    element.querySelector('.edit-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (currentEditingId === todo.id) return;
+        editTodo(todo.id);
+    });
+
+    // 删除任务
+    element.querySelector('.delete-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteTodo(todo.id);
+    });
+}
+
+/**
+ * 切换任务完成状态
+ * @param {number} id 任务ID
+ */
 function toggleTodo(id) {
     todos = todos.map(todo => {
         if (todo.id === id) {
@@ -209,14 +231,20 @@ function toggleTodo(id) {
     renderTodos();
 }
 
-// 删除任务
+/**
+ * 删除任务
+ * @param {number} id 任务ID
+ */
 function deleteTodo(id) {
     todos = todos.filter(todo => todo.id !== id);
     saveTodos();
     renderTodos();
 }
 
-// 循环切换任务优先级
+/**
+ * 循环切换任务优先级
+ * @param {number} id 任务ID
+ */
 function togglePriority(id) {
     todos = todos.map(todo => {
         if (todo.id === id) {
@@ -230,30 +258,14 @@ function togglePriority(id) {
     renderTodos();
 }
 
-// 编辑任务
+/**
+ * 编辑任务
+ * @param {number} id 任务ID
+ */
 function editTodo(id) {
     // 如果已经有任务在编辑，先保存它
     if (currentEditingId !== null && currentEditingId !== id) {
-        const editingElement = document.querySelector(`.todo-item[data-id="${currentEditingId}"]`);
-        if (editingElement) {
-            const editInput = editingElement.querySelector('.edit-input');
-            const editPrioritySelect = editingElement.querySelector('.edit-priority-select');
-            const editDueDateInput = editingElement.querySelector('.edit-due-date-input');
-            const todo = todos.find(t => t.id === currentEditingId);
-            
-            if (editInput && editPrioritySelect && todo) {
-                const newText = editInput.value.trim();
-                const newPriority = editPrioritySelect.value;
-                const newDueDate = editDueDateInput ? editDueDateInput.value : null;
-                
-                if (newText) {
-                    todo.text = newText;
-                    todo.priority = newPriority;
-                    todo.dueDate = newDueDate;
-                    saveTodos();
-                }
-            }
-        }
+        saveCurrentEdit();
     }
 
     // 重新渲染整个任务列表（关闭所有编辑模式）
@@ -271,24 +283,45 @@ function editTodo(id) {
     const originalPriority = todo.priority;
     const originalDueDate = todo.dueDate || '';
 
-    // 创建编辑模式的内容
-    todoElement.innerHTML = `
-        <input type="checkbox" ${todo.completed ? 'checked' : ''} disabled>
-        <select class="edit-priority-select">
-            <option value="low" ${originalPriority === 'low' ? 'selected' : ''}>低优先级</option>
-            <option value="medium" ${originalPriority === 'medium' ? 'selected' : ''}>中优先级</option>
-            <option value="high" ${originalPriority === 'high' ? 'selected' : ''}>高优先级</option>
-        </select>
-        <input type="date" class="edit-due-date-input" value="${originalDueDate}">
-        <input type="text" class="edit-input" value="${escapeHtml(originalText)}">
-        <button class="save-btn">保存</button>
-        <button class="cancel-btn">取消</button>
-    `;
+// 创建编辑模式的内容
+todoElement.innerHTML = `
+    <input type="checkbox" ${todo.completed ? 'checked' : ''} disabled>
+    <select class="edit-priority-select">
+        <option value="low" ${originalPriority === 'low' ? 'selected' : ''}>低优先级</option>
+        <option value="medium" ${originalPriority === 'medium' ? 'selected' : ''}>中优先级</option>
+        <option value="high" ${originalPriority === 'high' ? 'selected' : ''}>高优先级</option>
+    </select>
+    <input type="date" class="edit-due-date-input" value="${originalDueDate}" data-placeholder="无截止日期">
+    <input type="text" class="edit-input" value="${escapeHtml(originalText)}">
+    <button class="save-btn">保存</button>
+    <button class="cancel-btn">取消</button>
+`;
 
     // 获取编辑模式下的元素
     const editInput = todoElement.querySelector('.edit-input');
     const saveBtn = todoElement.querySelector('.save-btn');
     const cancelBtn = todoElement.querySelector('.cancel-btn');
+
+// 初始化编辑模式下的日期输入框占位符
+const editDueDateInput = todoElement.querySelector('.edit-due-date-input');
+if (!editDueDateInput.value) {
+    editDueDateInput.classList.add('empty');
+}
+
+// 监听编辑模式下日期输入框的变化
+editDueDateInput.addEventListener('change', () => {
+    if (editDueDateInput.value) {
+        editDueDateInput.classList.remove('empty');
+    } else {
+        editDueDateInput.classList.add('empty');
+    }
+});
+
+editDueDateInput.addEventListener('input', () => {
+    if (!editDueDateInput.value) {
+        editDueDateInput.classList.add('empty');
+    }
+});
 
     // 自动聚焦到输入框
     editInput.focus();
@@ -345,20 +378,48 @@ function editTodo(id) {
     });
 }
 
-// 切换主题
+/**
+ * 保存当前正在编辑的任务
+ */
+function saveCurrentEdit() {
+    const editingElement = document.querySelector(`.todo-item[data-id="${currentEditingId}"]`);
+    if (!editingElement) return;
+
+    const editInput = editingElement.querySelector('.edit-input');
+    const editPrioritySelect = editingElement.querySelector('.edit-priority-select');
+    const editDueDateInput = editingElement.querySelector('.edit-due-date-input');
+    const todo = todos.find(t => t.id === currentEditingId);
+    
+    if (editInput && editPrioritySelect && todo) {
+        const newText = editInput.value.trim();
+        const newPriority = editPrioritySelect.value;
+        const newDueDate = editDueDateInput ? editDueDateInput.value : null;
+        
+        if (newText) {
+            todo.text = newText;
+            todo.priority = newPriority;
+            todo.dueDate = newDueDate;
+            saveTodos();
+        }
+    }
+}
+
+/**
+ * 切换主题
+ */
 function toggleTheme() {
     document.body.classList.toggle('dark-mode');
     const isDarkMode = document.body.classList.contains('dark-mode');
-    const themeToggle = document.getElementById('theme-toggle');
     
     themeToggle.textContent = isDarkMode ? '☀️ 浅色' : '🌙 深色';
     localStorage.setItem('darkMode', isDarkMode);
 }
 
-// 加载保存的主题
+/**
+ * 加载保存的主题
+ */
 function loadTheme() {
     const isDarkMode = localStorage.getItem('darkMode') === 'true';
-    const themeToggle = document.getElementById('theme-toggle');
     
     if (isDarkMode) {
         document.body.classList.add('dark-mode');
@@ -366,45 +427,63 @@ function loadTheme() {
     }
 }
 
-// 保存任务到本地存储
+/**
+ * 保存任务到本地存储
+ */
 function saveTodos() {
     localStorage.setItem('todos', JSON.stringify(todos));
 }
 
-// 防止XSS攻击的HTML转义函数
+// ========================================
+// 工具函数
+// ========================================
+
+/**
+ * 防止XSS攻击的HTML转义函数
+ * @param {string} text 原始文本
+ * @returns {string} 转义后的HTML
+ */
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
 }
 
-// 判断日期是否已过期（第二天才算过期）
+/**
+ * 判断日期是否已过期（第二天才算过期）
+ * @param {string} dueDate 截止日期字符串
+ * @returns {boolean} 是否过期
+ */
 function isOverdue(dueDate) {
     if (!dueDate) return false;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const due = new Date(dueDate);
     due.setHours(0, 0, 0, 0);
-    // 只有当截止日期早于今天0点时，才算过期
     return due < today;
 }
 
-// 判断日期是否即将到期（包括当天）
+/**
+ * 判断日期是否即将到期（包括当天）
+ * @param {string} dueDate 截止日期字符串
+ * @returns {boolean} 是否即将到期
+ */
 function isDueSoon(dueDate) {
     if (!dueDate) return false;
-    const now = new Date();
-    const due = new Date(dueDate);
-    // 当天的截止日期视为即将到期
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
+    const due = new Date(dueDate);
     
-    // 截止日期在今天0点到明天0点之间，视为即将到期
     return due >= today && due < tomorrow;
 }
 
-// 格式化日期显示
+/**
+ * 格式化日期显示（月日格式）
+ * @param {string} dateString 日期字符串
+ * @returns {string} 格式化后的日期
+ */
 function formatDate(dateString) {
     if (!dateString) return '';
     const date = new Date(dateString);
@@ -413,46 +492,55 @@ function formatDate(dateString) {
     return `${month}月${day}日`;
 }
 
-// 获取今天的日期字符串（YYYY-MM-DD格式）
-function getTodayDateString() {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
+/**
+ * 格式化日期为YYYY-MM-DD格式
+ * @param {Date} date 日期对象
+ * @returns {string} 格式化后的日期字符串
+ */
+function formatDateToISO(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
 }
 
-// 获取明天的日期字符串（YYYY-MM-DD格式）
+/**
+ * 获取今天的日期字符串（YYYY-MM-DD格式）
+ * @returns {string} 今天的日期
+ */
+function getTodayDateString() {
+    return formatDateToISO(new Date());
+}
+
+/**
+ * 获取明天的日期字符串（YYYY-MM-DD格式）
+ * @returns {string} 明天的日期
+ */
 function getTomorrowDateString() {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    const year = tomorrow.getFullYear();
-    const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
-    const day = String(tomorrow.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return formatDateToISO(tomorrow);
 }
 
-// 启动应用
-init();
-
-// 初始化日期输入框占位符
-const dateInput = document.getElementById('due-date-input');
-if (!dateInput.value) {
-    dateInput.classList.add('empty');
+/**
+ * 初始化日期输入框占位符
+ */
+function initDateInputPlaceholder() {
+    updateDateInputPlaceholder();
 }
 
-// 监听日期输入框变化
-dateInput.addEventListener('change', () => {
-    if (dateInput.value) {
-        dateInput.classList.remove('empty');
+/**
+ * 更新日期输入框占位符状态
+ */
+function updateDateInputPlaceholder() {
+    if (dueDateInput.value) {
+        dueDateInput.classList.remove('empty');
     } else {
-        dateInput.classList.add('empty');
+        dueDateInput.classList.add('empty');
     }
-});
+}
 
-// 监听日期输入框清空
-dateInput.addEventListener('input', () => {
-    if (!dateInput.value) {
-        dateInput.classList.add('empty');
-    }
-});
+// ========================================
+// 启动应用
+// ========================================
+init();
