@@ -172,8 +172,26 @@ h1 {
     transition: opacity 0.3s;
 }
 
-.todo-item:hover .delete-btn {
-    opacity: 1;
+/* 电脑端（≥769px）：鼠标悬浮显示按钮（保持原有效果） */
+@media (min-width: 769px) {
+    .todo-item:hover .edit-btn,
+    .todo-item:hover .delete-btn {
+        opacity: 1;
+    }
+}
+
+/* 手机端（≤768px）：默认隐藏，点击任务激活后显示 */
+@media (max-width: 768px) {
+    .todo-item .edit-btn,
+    .todo-item .delete-btn {
+        opacity: 0 !important;
+        pointer-events: none;
+    }
+    .todo-item.active .edit-btn,
+    .todo-item.active .delete-btn {
+        opacity: 1 !important;
+        pointer-events: auto;
+    }
 }
 
 /* 响应式设计 */
@@ -201,10 +219,6 @@ h1 {
     opacity: 0;
     transition: opacity 0.3s;
     margin-right: 5px;
-}
-
-.todo-item:hover .edit-btn {
-    opacity: 1;
 }
 
 .edit-input {
@@ -517,10 +531,17 @@ body.dark-mode .todo-item:has(.edit-input) {
     flex: 1; /* 这三个控件平分宽度 */
     min-width: 0;
 }
+
 #next-day-btn {
-    flex: 0 0 62px; /* 固定小巧宽度，不拉伸 */
-    padding: 10px 4px; /* 缩小内边距，更精致 */
-    font-size: 13px;    /* 缩小文字 */
+    flex: 0 0 62px;
+    /* 核心：统一高度 + 垂直居中，解决过高问题 */
+    height: 38px;
+    padding: 0 4px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
 }
 
     .filters {

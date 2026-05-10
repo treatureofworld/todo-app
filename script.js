@@ -70,6 +70,8 @@ function addEventListeners() {
         }
     });
 
+closeAllEditMode();
+
     // 日期输入框变化事件
     dueDateInput.addEventListener('change', updateDateInputPlaceholder);
     dueDateInput.addEventListener('input', updateDateInputPlaceholder);
@@ -78,6 +80,13 @@ function addEventListeners() {
 // ========================================
 // 核心功能函数
 // ========================================
+
+// 关闭所有任务的修改模式（手机端）
+function closeAllEditMode() {
+    document.querySelectorAll('.todo-item').forEach(item => {
+        item.classList.remove('active');
+    });
+}
 
 /**
  * 添加新任务
@@ -195,6 +204,8 @@ function bindTodoEvents(element, todo) {
         toggleTodo(todo.id);
     });
 
+
+
     // 点击优先级标签切换优先级
     element.querySelector('.priority-badge').addEventListener('click', (e) => {
         e.stopPropagation();
@@ -213,6 +224,20 @@ function bindTodoEvents(element, todo) {
         e.stopPropagation();
         deleteTodo(todo.id);
     });
+
+// 手机端：点击任务切换修改模式
+element.addEventListener('click', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.classList.contains('priority-badge') || e.target.tagName === 'BUTTON') {
+        return;
+    }
+    e.stopPropagation();
+    const isActive = element.classList.contains('active');
+    closeAllEditMode();
+    if (!isActive) {
+        element.classList.add('active');
+    }
+});
+
 }
 
 /**
@@ -236,6 +261,7 @@ function toggleTodo(id) {
  * @param {number} id 任务ID
  */
 function deleteTodo(id) {
+    if (!confirm('确定要删除该任务吗？')) return
     todos = todos.filter(todo => todo.id !== id);
     saveTodos();
     renderTodos();
