@@ -491,7 +491,7 @@ body.dark-mode input[type="date"].empty::before {
 }
 
 /* ========================================
-   响应式适配（合并所有媒体查询）
+   响应式适配（最终修复版）
    ======================================== */
 /* 小屏手机 */
 @media (max-width: 480px) {
@@ -524,27 +524,29 @@ body.dark-mode input[type="date"].empty::before {
         font-size: 14px;
     }
 
+    /* 手机端新增任务：竖向排列，一行一个 */
     .input-container {
-        flex-wrap: wrap;
-        gap: 10px;
+        flex-direction: column;
+        flex-wrap: nowrap;
     }
 
-    #todo-input {
-        width: 100%;
-    }
-
+    #todo-input,
     #priority-select,
     #due-date-input,
-    #add-btn,
-    #next-day-btn {
-        flex: 1;
-        min-width: 0;
+    #next-day-btn,
+    #add-btn {
+        width: 100%;
+        flex: none;
     }
 
+    /* 统一手机端按钮高度 */
     #next-day-btn,
     #add-btn {
         height: 38px;
         padding: 0 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
     .filters {
@@ -561,35 +563,47 @@ body.dark-mode input[type="date"].empty::before {
         padding: 12px 10px;
     }
 
-    /* 手机端编辑模式固定布局 */
-    .todo-item:has(.edit-input) {
-        flex-wrap: wrap;
-        gap: 8px;
-        padding: 12px;
-    }
+    /* ========== 手机端编辑模式：强制三行布局 ========== */
+/* 手机端编辑模式固定布局 */
+.todo-item:has(.edit-input) {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px;
+}
 
-    .edit-input {
-        width: 100% !important;
-        margin: 0 !important;
-        order: 1;
-    }
+/* 第一行：输入框独占 */
+.edit-input {
+    width: 100% !important;
+    margin: 0 !important;
+    order: 1;
+}
 
-    .edit-priority-select,
-    .edit-due-date-input,
-    .save-btn,
-    .cancel-btn {
-        flex: 1 !important;
-        min-width: 0 !important;
-        order: 2 !important;
-        margin: 0 !important;
-        padding: 8px 4px !important;
-        font-size: 13px !important;
-        white-space: nowrap;
-    }
+/* 第二行：优先级+日期 */
+.edit-priority-select,
+.edit-due-date-input {
+    flex: 1 !important;
+    min-width: 0 !important;
+    order: 2 !important;
+    margin: 0 !important;
+    padding: 8px 4px !important;
+    font-size: 13px !important;
+}
 
-    .todo-item:has(.edit-input) input[type="checkbox"] {
-        display: none;
-    }
+/* 第三行：保存+取消 单独独占一行 */
+.save-btn,
+.cancel-btn {
+    width: 50% !important; /* 两个按钮平分第三行 */
+    order: 3 !important;
+    margin: 0 !important;
+    padding: 8px 4px !important;
+    font-size: 13px !important;
+    white-space: nowrap;
+}
+
+.todo-item:has(.edit-input) input[type="checkbox"] {
+    display: none;
+}
+
 
     .due-date-badge {
         font-size: 11px;
@@ -602,10 +616,5 @@ body.dark-mode input[type="date"].empty::before {
     .save-btn, .cancel-btn {
         padding: 8px 8px !important;
         font-size: 14px !important;
-    }
-
-    .edit-priority-select {
-        padding: 6px 8px !important;
-        font-size: 13px !important;
     }
 }
