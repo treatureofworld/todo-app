@@ -425,52 +425,37 @@ body.dark-mode .todo-item:has(.edit-input) {
 
 /* 手机端响应式适配 */
 @media (max-width: 768px) {
-    /* 编辑模式下允许换行 */
+    /* 编辑模式固定布局 */
     .todo-item:has(.edit-input) {
         flex-wrap: wrap;
-        gap: 10px;
-        padding: 15px 10px;
+        gap: 8px;
+        padding: 12px;
     }
 
-    /* 编辑输入框在手机端占满整行 */
+    /* 编辑输入框：独占第一行，占满宽度 */
     .edit-input {
-        order: 1;
-        width: 100%;
+        width: 100% !important;
         margin: 0 !important;
+        order: 1;
     }
 
-    /* 优先级选择器和按钮放在第二行 */
-    .edit-priority-select {
-        order: 2;
-        flex: 1;
-        margin-right: 0 !important;
+    /* 第二行容器：优先级 + 日期 + 保存 + 取消，4个控件平分宽度 */
+    .edit-priority-select,
+    .edit-due-date-input,
+    .save-btn,
+    .cancel-btn {
+        flex: 1 !important;
+        min-width: 0 !important;
+        order: 2 !important;
+        margin: 0 !important;
+        padding: 8px 4px !important;
+        font-size: 13px !important;
+        white-space: nowrap;
     }
 
-    .edit-due-date-input {
-        order: 2;
-        flex: 1;
-        margin-right: 0 !important;
-    }
-
-    .save-btn, .cancel-btn {
-        order: 3;
-        flex: 1;
-        padding: 8px 12px !important;
-        font-size: 16px !important;
-    }
-
-    /* 禁用的复选框在手机端隐藏，节省空间 */
+    /* 手机端隐藏复选框 */
     .todo-item:has(.edit-input) input[type="checkbox"] {
         display: none;
-    }
-
-    /* 调整按钮间距 */
-    .save-btn {
-        margin-left: 10px !important;
-    }
-
-    .cancel-btn {
-        margin-left: 5px !important;
     }
 }
 
